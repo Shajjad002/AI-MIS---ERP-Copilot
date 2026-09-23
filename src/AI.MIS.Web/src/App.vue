@@ -14,6 +14,13 @@ const isAdministrator = computed(() => roles.value.includes('Administrator'))
 
 function signIn() {
   authenticated.value = true
+  token.value = localStorage.getItem('ai-mis.access-token')
+  userName.value = localStorage.getItem('ai-mis.user')
+  try {
+    roles.value = JSON.parse(localStorage.getItem('ai-mis.roles') ?? '[]')
+  } catch {
+    roles.value = []
+  }
   currentPage.value = 'home'
 }
 </script>
