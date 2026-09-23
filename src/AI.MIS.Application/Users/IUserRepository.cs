@@ -4,5 +4,12 @@ namespace AI.MIS.Application.Users;
 
 public interface IUserRepository
 {
-    Task<User?> FindByUserNameAsync(string userName, CancellationToken cancellationToken = default);
+    Task<AuthenticatedUser?> FindByUserNameAsync(string userName, CancellationToken cancellationToken = default);
 }
+
+public sealed record AuthenticatedUser(
+    Guid Id,
+    string UserName,
+    string PasswordHash,
+    IReadOnlyList<string> Roles,
+    IReadOnlyList<string> BranchCodes);

@@ -3,6 +3,7 @@ CREATE TABLE dbo.Users (
     UserName NVARCHAR(100) NOT NULL UNIQUE,
     DisplayName NVARCHAR(200) NOT NULL,
     Email NVARCHAR(320) NOT NULL,
+    PasswordHash NVARCHAR(500) NOT NULL,
     IsActive BIT NOT NULL CONSTRAINT DF_Users_IsActive DEFAULT 1,
     CreatedAtUtc DATETIME2 NOT NULL CONSTRAINT DF_Users_CreatedAtUtc DEFAULT SYSUTCDATETIME()
 );
@@ -26,4 +27,17 @@ CREATE TABLE dbo.UserBranchAccess (
     BranchCode NVARCHAR(20) NOT NULL,
     CONSTRAINT PK_UserBranchAccess PRIMARY KEY (UserId, BranchCode),
     CONSTRAINT FK_UserBranchAccess_Users FOREIGN KEY (UserId) REFERENCES dbo.Users(Id)
+);
+
+CREATE TABLE dbo.AuditLog (
+    Id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    UserId UNIQUEIDENTIFIER NULL,
+    Action NVARCHAR(100) NOT NULL,
+    Outcome NVARCHAR(50) NOT NULL,
+    Question NVARCHAR(4000) NULL,
+    GeneratedSql NVARCHAR(MAX) NULL,
+    ExecutionTimeMilliseconds BIGINT NULL,
+    ErrorMessage NVARCHAR(2000) NULL,
+    CreatedAtUtc DATETIME2 NOT NULL CONSTRAINT DF_AuditLog_CreatedAtUtc DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_AuditLog_User FOREIGN KEY (UserId) REFERENCES dbo.Users(Id)
 );
