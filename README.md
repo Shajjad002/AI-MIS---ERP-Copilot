@@ -17,7 +17,7 @@ An enterprise-ready foundation for a read-only, natural-language MIS and ERP ana
 - Initial schema metadata database tables
 - Interpretation endpoint that never executes its proposed SQL
 
-### Configure an LLM
+### Configure an LLM and read-only ERP database
 
 Keep credentials outside source control. Set these environment variables before calling `POST /api/copilot/interpret`:
 
@@ -25,9 +25,11 @@ Keep credentials outside source control. Set these environment variables before 
 $env:Llm__Endpoint = 'https://your-provider.example/v1/chat/completions'
 $env:Llm__ApiKey = 'your-secret-key'
 $env:Llm__Model = 'your-model-name'
+$env:ConnectionStrings__ErpReadOnlyDatabase = 'Server=...;Database=...;User Id=...;Password=...;Encrypt=True;'
 ```
 
 Use `GET /api/schema-metadata` to inspect the only schema sent to the LLM. `POST /api/copilot/interpret` accepts `{ "question": "..." }`; it returns an interpretation and optional proposed SQL, but never executes it.
+Use `POST /api/copilot/query` with the same request to validate and execute a proposed query. The query must be one approved, read-only `SELECT` statement and execution is limited to 15 seconds by default. Configure a read-only database principal; application validation is defense in depth, not a replacement for database permissions.
 
 ## Run the API
 
