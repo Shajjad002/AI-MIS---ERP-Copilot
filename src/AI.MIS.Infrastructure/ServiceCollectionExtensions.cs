@@ -6,6 +6,8 @@ using AI.MIS.Infrastructure.Database;
 using AI.MIS.Infrastructure.Audit;
 using AI.MIS.Infrastructure.Security;
 using AI.MIS.Application.Users;
+using AI.MIS.Application.Rag;
+using AI.MIS.Infrastructure.Rag;
 
 namespace AI.MIS.Infrastructure;
 
@@ -23,7 +25,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReadOnlyQueryExecutor, SqlReadOnlyQueryExecutor>();
         services.AddSingleton<IAuditLogger, LoggingAuditLogger>();
         services.AddScoped<IUserRepository, SqlUserRepository>();
+        services.AddScoped<IUserManagementService, SqlUserManagementService>();
         services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
+        services.Configure<RagOptions>(configuration.GetSection(RagOptions.SectionName));
+        services.AddSingleton<IDocumentStore, LocalDocumentStore>();
         return services;
     }
 }
