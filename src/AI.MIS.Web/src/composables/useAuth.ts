@@ -3,10 +3,12 @@ import type { LoginResponse } from '../types/auth'
 
 const tokenKey = 'ai-mis.access-token'
 const userKey = 'ai-mis.user'
+const rolesKey = 'ai-mis.roles'
 
 export function useAuth() {
   const token = ref(localStorage.getItem(tokenKey))
   const userName = ref(localStorage.getItem(userKey))
+  const roles = ref<string[]>(JSON.parse(localStorage.getItem(rolesKey) ?? '[]'))
   const loading = ref(false)
   const error = ref('')
 
@@ -28,8 +30,10 @@ export function useAuth() {
       const result = body as LoginResponse
       localStorage.setItem(tokenKey, result.accessToken)
       localStorage.setItem(userKey, result.userName)
+      localStorage.setItem(rolesKey, JSON.stringify(result.roles))
       token.value = result.accessToken
       userName.value = result.userName
+      roles.value = result.roles
       return true
     } catch (exception) {
       error.value = exception instanceof Error ? exception.message : 'Login failed.'
@@ -42,9 +46,11 @@ export function useAuth() {
   function logout() {
     localStorage.removeItem(tokenKey)
     localStorage.removeItem(userKey)
+    localStorage.removeItem(rolesKey)
     token.value = null
     userName.value = null
+    roles.value = []
   }
 
-  return { token, userName, loading, error, login, logout }
+  return { token, userName, roles, loading, error, login, logout }
 }
