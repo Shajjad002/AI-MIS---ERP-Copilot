@@ -34,6 +34,12 @@ public sealed class SqlReadOnlyQueryExecutor(IOptions<DatabaseOptions> options) 
         }
 
         stopwatch.Stop();
-        return new CopilotQueryResult(columns, rows, stopwatch.ElapsedMilliseconds);
+        var numericColumn = columns.FirstOrDefault(column =>
+            rows.Any(row => row[column] is byte or short or int or long or float or double or decimal));
+        var summary = numericColumn is null
+            ? $"The query returned {rows.Count:N0} row{(rows.Count == 1 ? string.Empty : "s")}."
+            : $"The query returned {rows.Count:N0} row{(rows.Count == 1 ? string.Empty : "s")}. {numericColumn} totals {rows.Sum(row => Convert.ToDecimal(row[numericColumn] ?? 0)):N2}.";
+
+        return new CopilotQueryResult(columns, rows, stopwatch.ElapsedMilliseconds, summary);
     }
 }
