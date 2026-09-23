@@ -87,6 +87,22 @@ Change these development-only passwords before any deployment outside local deve
 - JWT validation middleware and authorization on the query endpoint
 - Branch users must include authorized `BranchCode` equality predicates
 
+## Sprint 6 started — RAG
+
+- Authenticated document catalog and upload endpoint
+- Safe local document storage for `.txt`, `.md`, `.pdf`, and `.docx`
+- Upload size validation (10 MB default)
+- Document metadata catalog ready for text extraction, embeddings, and vector search
+
+RAG document endpoints:
+
+```text
+GET  /api/documents
+POST /api/documents/upload (multipart form field: file)
+```
+
+Only Administrator and MIS Analyst users can upload or list documents. Files are stored under `App_Data/documents`; configure `Rag:StoragePath` for another local location. Do not expose this directory as a static web directory.
+
 ### Configure an LLM and read-only ERP database
 
 Keep credentials outside source control. Set these environment variables before calling `POST /api/copilot/interpret`:
