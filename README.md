@@ -87,31 +87,53 @@ Change these development-only passwords before any deployment outside local deve
 - JWT validation middleware and authorization on the query endpoint
 - Branch users must include authorized `BranchCode` equality predicates
 
-## Sprint 6 started — RAG
+## Sprint 6 complete — RAG
 
-- Authenticated document catalog and upload endpoint
-- Safe local document storage for `.txt`, `.md`, `.pdf`, and `.docx`
-- Upload size validation (10 MB default)
-- Document metadata catalog ready for text extraction, embeddings, and vector search
+- Authenticated PDF, DOCX, TXT, and Markdown upload with bounded text extraction
+- Section/page-aware document chunking with configurable overlap
+- OpenAI-compatible batched embedding generation
+- Persistent local vector index with cosine similarity search
+- Retrieved business-rule and policy passages provided as untrusted context to the LLM
+- Grounded answers with server-generated document/page/section citations
+- Authenticated document management and RAG question UI
+- Admin/MIS Analyst-only document upload, listing, search, and ask endpoints
+
+Configure the embedding provider in user secrets or the deployment secret store. The API must also have the normal `Llm` chat-completions settings configured for grounded answers:
+
+```powershell
+dotnet user-secrets set 'Rag:EmbeddingsEndpoint' 'https://api.openai.com/v1/embeddings' --project src/AI.MIS.Api
+dotnet user-secrets set 'Rag:EmbeddingsApiKey' '<provider-key>' --project src/AI.MIS.Api
+dotnet user-secrets set 'Rag:EmbeddingsModel' 'text-embedding-3-small' --project src/AI.MIS.Api
+```
+
+Use the same embedding model and dimensions for indexing and querying. Changing embedding models requires reindexing documents. Documents are stored under `App_Data/documents`, including the local `vectors.json` index; configure `Rag:StoragePath` to a persistent private volume in deployment. Do not expose this directory as a static web directory.
 
 RAG document endpoints:
 
 ```text
 GET  /api/documents
 POST /api/documents/upload (multipart form field: file)
+POST /api/documents/{documentId}/index
+POST /api/documents/search   { "query": "..." }
+POST /api/documents/ask      { "question": "..." }
 ```
 
-Only Administrator and MIS Analyst users can upload or list documents. Files are stored under `App_Data/documents`; configure `Rag:StoragePath` for another local location. Do not expose this directory as a static web directory.
+Upload extracts and indexes the document before returning success. If embedding configuration or indexing fails, the file remains listed and can be retried through the index endpoint. Ask responses include citations generated from retrieved passages, not from free-form model citation claims.
 
 ### Configure an LLM and read-only ERP database
 
-Keep credentials outside source control. Set these environment variables before calling `POST /api/copilot/interpret`:
+For local development, keep the OpenAI key in .NET User Secrets rather than in the web app or a checked-in settings file. From the repository root, set it using a secure PowerShell prompt:
 
 ```powershell
-$env:Llm__Endpoint = 'https://your-provider.example/v1/chat/completions'
-$env:Llm__ApiKey = 'your-secret-key'
-$env:Llm__Model = 'your-model-name'
+$secureKey = Read-Host 'OpenAI API key' -AsSecureString
+$apiKey = [System.Net.NetworkCredential]::new('', $secureKey).Password
+dotnet user-secrets set 'Llm:ApiKey' $apiKey --project src/AI.MIS.Api
+Remove-Variable apiKey, secureKey
+dotnet user-secrets set 'Llm:Endpoint' 'https://api.openai.com/v1/chat/completions' --project src/AI.MIS.Api
+dotnet user-secrets set 'Llm:Model' 'gpt-6-astra' --project src/AI.MIS.Api
 ```
+
+User Secrets are stored outside the repository and loaded automatically in Development, but are not encrypted; use them for local development only. Use your hosting platform's secret store in deployed environments. The API key is used only by the ASP.NET API. This configures the existing chat-completions client for `POST /api/copilot/interpret`; it does not create an Agents API session.
 
 For a local GPT4All API server, no API key is required:
 
