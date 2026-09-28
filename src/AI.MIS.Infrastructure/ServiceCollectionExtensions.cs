@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
         services.Configure<DatabaseOptions>(configuration.GetSection(DatabaseOptions.SectionName));
         services.Configure<AuthenticationOptions>(configuration.GetSection(AuthenticationOptions.SectionName));
         services.AddHttpClient<ILlmClient, OpenAiCompatibleLlmClient>(client => client.Timeout = TimeSpan.FromSeconds(30));
+        services.AddHttpClient<IEmbeddingGenerator, OpenAiEmbeddingGenerator>(client => client.Timeout = TimeSpan.FromSeconds(60));
         services.AddSingleton<ISchemaMetadataProvider, InMemorySchemaMetadataProvider>();
         services.AddSingleton<ISqlQueryValidator, SqlQueryValidator>();
         services.AddSingleton<IQueryAuthorizationService, QueryAuthorizationService>();
@@ -29,6 +30,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
         services.Configure<RagOptions>(configuration.GetSection(RagOptions.SectionName));
         services.AddSingleton<IDocumentStore, LocalDocumentStore>();
+        services.AddSingleton<IDocumentTextExtractor, DocumentTextExtractor>();
+        services.AddSingleton<IVectorStore, LocalVectorStore>();
+        services.AddScoped<IRagService, RagService>();
         return services;
     }
 }

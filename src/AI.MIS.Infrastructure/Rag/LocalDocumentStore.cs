@@ -10,6 +10,14 @@ public sealed class RagOptions
     public const string SectionName = "Rag";
     public string StoragePath { get; init; } = "App_Data/documents";
     public long MaxUploadBytes { get; init; } = 10 * 1024 * 1024;
+    public int ChunkSizeCharacters { get; init; } = 1400;
+    public int ChunkOverlapCharacters { get; init; } = 180;
+    public int SearchTopK { get; init; } = 5;
+    public double MinimumSimilarity { get; init; } = 0.15;
+    public string EmbeddingsEndpoint { get; init; } = string.Empty;
+    public string EmbeddingsApiKey { get; init; } = string.Empty;
+    public string EmbeddingsModel { get; init; } = string.Empty;
+    public int MaxExtractedCharacters { get; init; } = 2_000_000;
 }
 
 public sealed class LocalDocumentStore(IOptions<RagOptions> options, IWebHostEnvironment environment) : IDocumentStore
@@ -31,8 +39,27 @@ public sealed class LocalDocumentStore(IOptions<RagOptions> options, IWebHostEnv
         Directory.CreateDirectory(root);
         var id = Guid.NewGuid();
         var storedName = $"{id:N}{extension}";
-        await using (var target = File.Create(Path.Combine(root, storedName)))
-            await content.CopyToAsync(target, cancellationToken);
+        var storedPath = Path.Combine(root, storedName);
+        try
+        {
+            await using var target = File.Create(storedPath);
+            var buffer = new byte[81920];
+            long copied = 0;
+            int read;
+            while ((read = await content.ReadAsync(buffer, cancellationToken)) > 0)
+            {
+                copied += read;
+                if (copied > settings.MaxUploadBytes)
+                    throw new InvalidOperationException($"Document size cannot exceed {settings.MaxUploadBytes} bytes.");
+                await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            }
+            if (copied == 0) throw new InvalidOperationException("The uploaded document is empty.");
+        }
+        catch
+        {
+            if (File.Exists(storedPath)) File.Delete(storedPath);
+            throw;
+        }
 
         var document = new StoredDocument(id, Path.GetFileName(fileName), string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType, length, uploadedBy, DateTimeOffset.UtcNow);
         await gate.WaitAsync(cancellationToken);
@@ -51,6 +78,18 @@ public sealed class LocalDocumentStore(IOptions<RagOptions> options, IWebHostEnv
         }
 
         return document;
+    }
+
+    public async Task<Stream> OpenReadAsync(Guid documentId, CancellationToken cancellationToken = default)
+    {
+        var documents = await ListAsync(cancellationToken);
+        var document = documents.SingleOrDefault(item => item.Id == documentId)
+            ?? throw new FileNotFoundException("The requested document does not exist.");
+        var extension = Path.GetExtension(document.FileName).ToLowerInvariant();
+        var root = Path.GetFullPath(Path.Combine(environment.ContentRootPath, options.Value.StoragePath));
+        var filePath = Path.Combine(root, $"{documentId:N}{extension}");
+        if (!File.Exists(filePath)) throw new FileNotFoundException("The document file is missing from storage.");
+        return File.OpenRead(filePath);
     }
 
     public async Task<IReadOnlyList<StoredDocument>> ListAsync(CancellationToken cancellationToken = default)
