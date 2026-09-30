@@ -30,10 +30,10 @@ function signIn() {
 <template>
   <LoginPage v-if="!authenticated" @authenticated="signIn" />
   <template v-else>
-    <div class="app-layout">
+    <div class="app-layout min-h-screen">
       <nav class="app-sidebar">
         <span class="brand">AI MIS & ERP Copilot</span>
-        <div class="sidebar-links">
+        <div class="sidebar-links flex-wrap">
           <button class="nav-link" :class="{ active: currentPage === 'home' }" type="button" @click="currentPage = 'home'">Home</button>
           <button class="nav-link" :class="{ active: currentPage === 'visualization' }" type="button" @click="currentPage = 'visualization'">Visualization</button>
           <button v-if="isAdministrator" class="nav-link" :class="{ active: currentPage === 'users' }" type="button" @click="currentPage = 'users'">Users</button>
@@ -45,7 +45,7 @@ function signIn() {
           <button class="secondary-button" type="button" @click="logout(); authenticated = false; currentPage = 'home'">Sign out</button>
         </div>
       </nav>
-      <div class="app-content">
+      <div class="app-content min-w-0">
         <HomePage v-if="currentPage === 'home'" :user-name="userName" @open-visualization="currentPage = 'visualization'" />
         <VisualizationPage v-else-if="currentPage === 'visualization'" />
         <UserAccessPage v-else-if="currentPage === 'users'" @create-user="currentPage = 'create-user'" />
