@@ -16,7 +16,7 @@ const trendPoints = computed(() => trendValues.map((value, index) => `${index * 
 </script>
 
 <template>
-  <main class="shell home-shell">
+  <main class="shell home-shell page-dashboard">
     <section class="home-hero">
       <p class="eyebrow">AI MIS & ERP Copilot</p>
       <h1>Good to see you{{ userName ? `, ${userName}` : '' }}.</h1>
