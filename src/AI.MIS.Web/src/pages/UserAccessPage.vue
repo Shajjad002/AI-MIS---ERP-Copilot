@@ -34,7 +34,7 @@ onMounted(load)
 </script>
 
 <template>
-  <main class="shell admin-shell">
+  <main class="shell admin-shell user-access-page">
     <div class="page-heading"><div><p class="eyebrow">Administration</p><h1>User access</h1><p class="lede">Review roles, branch permissions, and account status.</p></div><button type="button" @click="emit('createUser')">Create user</button></div>
     <p v-if="error" class="error">{{ error }}</p>
     <section class="table-card admin-table">

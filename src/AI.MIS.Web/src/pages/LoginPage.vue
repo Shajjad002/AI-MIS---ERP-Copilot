@@ -13,7 +13,7 @@ async function submit() {
 </script>
 
 <template>
-  <main class="auth-shell">
+  <main class="auth-shell login-page">
     <section class="login-card">
       <p class="eyebrow">AI MIS & ERP Copilot</p>
       <h1>Welcome back.</h1>

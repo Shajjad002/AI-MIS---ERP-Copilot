@@ -1,0 +1,51 @@
+.page-dashboard { min-height: calc(100vh - 76px); }
+.page-dashboard .home-hero { background: linear-gradient(135deg, var(--ui-surface), var(--ui-primary-soft)); border: 1px solid var(--ui-border); border-radius: 14px; padding: clamp(2rem, 7vw, 5rem); }
+.page-dashboard .home-hero h1 { max-width: 800px; overflow-wrap: anywhere; }
+.page-dashboard .home-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 1rem; }
+.page-dashboard .home-card { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 12px; padding: 1.25rem; }
+.page-dashboard .home-card h2 { font-size: 1.15rem; margin: 1.25rem 0 .5rem; }
+.page-dashboard .home-card p { color: var(--ui-muted); line-height: 1.6; margin: 0; }
+.page-dashboard .home-icon { color: var(--ui-primary); font-weight: 800; letter-spacing: .08em; }
+.page-dashboard .home-dashboard { background: var(--ui-surface); border: 1px solid var(--ui-border); border-radius: 14px; margin-top: 1rem; padding: 1.25rem; }
+.page-dashboard .dashboard-heading { align-items: center; display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; }
+.page-dashboard .dashboard-heading h2 { margin-top: .25rem; }
+.page-dashboard .dashboard-kpis { display: grid; gap: .85rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 1.25rem; }
+.page-dashboard .dashboard-kpi { background: var(--ui-subtle); border: 1px solid var(--ui-border); border-radius: 10px; padding: 1rem; }
+.page-dashboard .dashboard-kpi span, .page-dashboard .dashboard-kpi small { color: var(--ui-muted); display: block; }
+.page-dashboard .dashboard-kpi strong { display: block; font-size: 1.65rem; margin: .4rem 0 .25rem; }
+.page-dashboard .dashboard-kpi small { font-size: .8rem; }
+.page-dashboard .dashboard-charts { display: grid; gap: 1rem; grid-template-columns: 1.25fr 1fr; margin-top: 1rem; }
+.page-dashboard .dashboard-chart { background: var(--ui-subtle); border: 1px solid var(--ui-border); border-radius: 10px; min-width: 0; padding: 1rem; }
+.page-dashboard .chart-highlight { color: var(--ui-primary); font-size: 1.4rem; }
+.page-dashboard .line-chart { height: 190px; margin-top: 1rem; position: relative; }
+.page-dashboard .line-chart svg { height: 140px; overflow: visible; position: absolute; top: 0; width: 100%; }
+.page-dashboard .chart-gridline { border-top: 1px dashed var(--ui-border); left: 0; position: absolute; right: 0; }
+.page-dashboard .chart-gridline-high { top: 20px; }
+.page-dashboard .chart-gridline-mid { top: 64px; }
+.page-dashboard .chart-gridline-low { top: 108px; }
+.page-dashboard .chart-area { fill: color-mix(in srgb, var(--ui-primary) 10%, transparent); }
+.page-dashboard .chart-line { fill: none; stroke: var(--ui-primary); stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; vector-effect: non-scaling-stroke; }
+.page-dashboard .chart-dot { fill: var(--ui-primary); stroke: var(--ui-subtle); stroke-width: 2; }
+.page-dashboard .chart-labels { bottom: 0; color: var(--ui-muted); display: flex; font-size: .75rem; justify-content: space-between; left: 0; position: absolute; right: 0; }
+.page-dashboard .home-bars { display: grid; gap: 1.1rem; margin-top: 1.7rem; }
+.page-dashboard .home-bar-row { align-items: center; display: grid; font-size: .85rem; gap: .7rem; grid-template-columns: 72px 1fr 38px; }
+.page-dashboard .home-bar-track { background: var(--ui-border); border-radius: 99px; height: 10px; overflow: hidden; }
+.page-dashboard .home-bar-fill { border-radius: inherit; display: block; height: 100%; }
+.page-dashboard .home-bar-row strong { text-align: right; }
+.page-dashboard .dashboard-note { color: var(--ui-muted); font-size: .8rem; margin: 1rem 0 0; }
+
+@media (max-width: 1000px) {
+  .page-dashboard .dashboard-charts { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .page-dashboard .home-grid, .page-dashboard .dashboard-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .page-dashboard .home-hero { padding: 1.5rem; }
+  .page-dashboard .home-grid, .page-dashboard .dashboard-kpis { grid-template-columns: 1fr; }
+  .page-dashboard .dashboard-heading { align-items: stretch; flex-direction: column; }
+  .page-dashboard .dashboard-heading > button { width: 100%; }
+}
+@media (max-width: 380px) {
+  .page-dashboard .home-bar-row { gap: .4rem; grid-template-columns: 62px 1fr 34px; }
+}

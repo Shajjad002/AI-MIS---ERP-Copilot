@@ -54,7 +54,7 @@ onMounted(() => loadDocuments().catch(exception => { error.value = exception ins
 </script>
 
 <template>
-  <main class="shell admin-shell">
+  <main class="shell admin-shell documents-page">
     <p class="eyebrow">Knowledge base</p>
     <h1>Documents & business rules</h1>
     <p class="lede">Upload reference files, then ask questions answered from indexed content with source citations.</p>

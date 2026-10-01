@@ -11,7 +11,7 @@ const { loading, error, response, runQuery } = useCopilotQuery()
 </script>
 
 <template>
-  <main class="shell">
+  <main class="shell analytics-page">
     <header class="hero">
       <p class="eyebrow">AI MIS & ERP Copilot</p>
       <h1>Visualization</h1>

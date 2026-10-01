@@ -149,6 +149,8 @@ Use `POST /api/copilot/query` with the same request to validate and execute a pr
 
 ## Run the API
 
+For an existing application database, apply `database/Tables/004_UserProfileImage.sql` before creating users with a profile image. The migration adds nullable image columns and is safe to run more than once. Create User accepts optional JPEG, PNG, or WebP profile images up to 5 MB; stored images are returned only from the authenticated profile-image endpoint.
+
 ```powershell
 dotnet run --project src/AI.MIS.Api
 ```
