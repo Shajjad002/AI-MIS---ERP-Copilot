@@ -87,6 +87,8 @@ Change these development-only passwords before any deployment outside local deve
 - JWT validation middleware and authorization on the query endpoint
 - Branch users must include authorized `BranchCode` equality predicates
 
+Branch-user queries are deliberately limited to a single table and must include an authorized `BranchCode` equality in every `OR` branch. Queries with joins or subqueries are rejected until branch scoping can be enforced independently of generated SQL.
+
 ## Sprint 6 complete — RAG
 
 - Authenticated PDF, DOCX, TXT, and Markdown upload with bounded text extraction
