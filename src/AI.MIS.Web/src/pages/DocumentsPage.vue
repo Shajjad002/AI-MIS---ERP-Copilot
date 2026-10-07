@@ -1,5 +1,6 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { apiFetch } from '../config/api'
 
 type DocumentInfo = { id: string; fileName: string; contentType: string; length: number; uploadedAt: string }
 type Citation = { documentId: string; fileName: string; pageNumber: number | null; section: string | null; quote: string }
@@ -15,7 +16,9 @@ const notice = ref('')
 const token = () => localStorage.getItem('ai-mis.access-token') ?? ''
 
 async function loadDocuments() {
-  const response = await fetch('http://localhost:5252/api/documents', { headers: { Authorization: `Bearer ${token()}` } })
+  const response = await apiFetch('/api/documents', {
+    headers: { Authorization: `Bearer ${token()}` },
+  })
   if (!response.ok) throw new Error(`Unable to load documents (HTTP ${response.status}).`)
   documents.value = await response.json()
 }
@@ -25,7 +28,11 @@ async function upload() {
   try {
     const data = new FormData()
     data.append('file', selectedFile.value)
-    const response = await fetch('http://localhost:5252/api/documents/upload', { method: 'POST', headers: { Authorization: `Bearer ${token()}` }, body: data })
+    const response = await apiFetch('/api/documents/upload', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token()}` },
+      body: data,
+    })
     const body = await response.json().catch(() => ({}))
     if (!response.ok) throw new Error(body.message ?? body.error ?? `Upload failed (HTTP ${response.status}).`)
     notice.value = `${selectedFile.value.name} uploaded and indexed into ${body.indexedChunks} searchable passages.`
@@ -38,7 +45,7 @@ async function ask() {
   if (!question.value.trim()) { error.value = 'Enter a question about the uploaded documents.'; return }
   busy.value = true; error.value = ''; answer.value = null
   try {
-    const response = await fetch('http://localhost:5252/api/documents/ask', {
+    const response = await apiFetch('/api/documents/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
       body: JSON.stringify({ question: question.value.trim() }),

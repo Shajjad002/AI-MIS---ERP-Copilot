@@ -153,6 +153,10 @@ Use `POST /api/copilot/query` with the same request to validate and execute a pr
 
 For an existing application database, apply `database/Tables/004_UserProfileImage.sql` before creating users with a profile image. The migration adds nullable image columns and is safe to run more than once. Create User accepts optional JPEG, PNG, or WebP profile images up to 5 MB; stored images are returned only from the authenticated profile-image endpoint.
 
+For menu administration, apply `database/Tables/005_MenuManagement.sql` to the application database before using the menu endpoints or Menu management page. It creates the menu catalog, menu-role definitions, menu visibility grants, and per-user custom menu-role assignments, then seeds the initial navigation entries.
+
+Menu roles only determine which navigation entries are shown. They do not grant authorization to API endpoints: protected API access continues to use the existing Administrator, MIS Analyst, and Branch User JWT roles.
+
 ```powershell
 dotnet run --project src/AI.MIS.Api
 ```

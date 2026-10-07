@@ -17,11 +17,13 @@ textarea { resize: vertical; width: 100%; }
 textarea::placeholder, input::placeholder { color: var(--ui-muted); }
 select { font: inherit; }
 .page-content button:not(.secondary-button):not(.nav-link):not(.icon-button):not(.profile-button):not(.search-results button):not(.profile-popover button) {
-  background: var(--ui-primary);
+  background: var(--ui-input);
+  border: 1px solid var(--ui-border);
   color: #fff;
 }
 .page-content button:not(.secondary-button):not(.nav-link):not(.icon-button):not(.profile-button):not(.search-results button):not(.profile-popover button):hover {
   background: var(--ui-primary-hover);
+  color: #616161;
 }
 .secondary-button { background: transparent !important; border: 1px solid var(--ui-border); color: var(--ui-text) !important; }
 .secondary-button:hover { background: var(--ui-subtle) !important; }

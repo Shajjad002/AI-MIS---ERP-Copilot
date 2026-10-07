@@ -12,11 +12,13 @@ public sealed class MISReportController : ControllerBase
 {
     private readonly UserSession _userSession;
     private readonly BaseResponse _response ;
+    private readonly IMISReportService _mISReportService;
 
-    public MISReportController(UserSession userSession, BaseResponse response)
+    public MISReportController(UserSession userSession, BaseResponse response, IMISReportService mISReportService)
     {
         _userSession = userSession;
         _response = new BaseResponse();
+        _mISReportService = mISReportService;
     }
 
     [HttpGet]
@@ -58,40 +60,40 @@ public sealed class MISReportController : ControllerBase
         branchDayStatusViewModel.SystemDay = Convert.ToDateTime(viewModel.ToDate);
 
         var result = new BaseResponse();
-        result = await misReportService.GetBranchPortfolioReport(viewModel);
+        result = await _mISReportService.GetBranchPortfolioReport(viewModel);
         result.IsFromReportServer = OperationPolicies.WillReportLoadFromReportServerDB == 1;
 
-        var workStationStatusList = await _dayInformationService.GetWorkStationDayStatusList(branchDayStatusViewModel);
-        var dashboardViewModel = new DashboardViewModel();
-        if (result.IsSuccessful || workStationStatusList.Count > 0)
-        {
-            dashboardViewModel.BranchPortfolio = (BranchPortfolioViewModel)result.Data;
-            if (!string.IsNullOrEmpty(viewModel.BranchCode))
-            {
-                dashboardViewModel.CurrentDateBranchOpenCount = workStationStatusList.Where(s => s.BranchCode == viewModel.BranchCode).ToList().Count;
-            }
-            else if (!string.IsNullOrEmpty(viewModel.AreaCode))
-            {
-                dashboardViewModel.CurrentDateBranchOpenCount = workStationStatusList.Where(s => s.AreaCode == viewModel.AreaCode).ToList().Count;
-            }
-            else if (!string.IsNullOrEmpty(viewModel.RegionCode))
-            {
-                dashboardViewModel.CurrentDateBranchOpenCount = workStationStatusList.Where(s => s.RegionCode == viewModel.RegionCode).ToList().Count;
-            }
-            else if (!string.IsNullOrEmpty(viewModel.ZoneCode))
-            {
-                dashboardViewModel.CurrentDateBranchOpenCount = workStationStatusList.Where(s => s.ZoneCode == viewModel.ZoneCode).ToList().Count;
-            }
-            else
-            {
-                dashboardViewModel.CurrentDateBranchOpenCount = workStationStatusList.Count;
+        // var workStationStatusList = await _dayInformationService.GetWorkStationDayStatusList(branchDayStatusViewModel);
+        // var dashboardViewModel = new DashboardViewModel();
+        // if (result.IsSuccessful || workStationStatusList.Count > 0)
+        // {
+        //     dashboardViewModel.BranchPortfolio = (BranchPortfolioViewModel)result.Data;
+        //     if (!string.IsNullOrEmpty(viewModel.BranchCode))
+        //     {
+        //         dashboardViewModel.CurrentDateBranchOpenCount = workStationStatusList.Where(s => s.BranchCode == viewModel.BranchCode).ToList().Count;
+        //     }
+        //     else if (!string.IsNullOrEmpty(viewModel.AreaCode))
+        //     {
+        //         dashboardViewModel.CurrentDateBranchOpenCount = workStationStatusList.Where(s => s.AreaCode == viewModel.AreaCode).ToList().Count;
+        //     }
+        //     else if (!string.IsNullOrEmpty(viewModel.RegionCode))
+        //     {
+        //         dashboardViewModel.CurrentDateBranchOpenCount = workStationStatusList.Where(s => s.RegionCode == viewModel.RegionCode).ToList().Count;
+        //     }
+        //     else if (!string.IsNullOrEmpty(viewModel.ZoneCode))
+        //     {
+        //         dashboardViewModel.CurrentDateBranchOpenCount = workStationStatusList.Where(s => s.ZoneCode == viewModel.ZoneCode).ToList().Count;
+        //     }
+        //     else
+        //     {
+        //         dashboardViewModel.CurrentDateBranchOpenCount = workStationStatusList.Count;
 
-            }
+        //     }
 
-        }
+        // }
         _response.IsSuccessful = result.IsSuccessful;
         _response.Message = result.Message;
-        _response.Data = dashboardViewModel;
+       // _response.Data = dashboardViewModel;
         _response.IsFromReportServer = result.IsFromReportServer;
 
         return Ok(_response);

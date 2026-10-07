@@ -1,5 +1,6 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { apiFetch } from '../config/api'
 
 type ManagedUser = { id: string; userName: string; displayName: string; email: string; isActive: boolean; roles: string[]; branchCodes: string[] }
 const users = ref<ManagedUser[]>([])
@@ -13,7 +14,9 @@ const branches = ref('')
 async function load() {
   loading.value = true
   try {
-    const response = await fetch('http://localhost:5252/api/users', { headers: { Authorization: `Bearer ${localStorage.getItem('ai-mis.access-token')}` } })
+    const response = await apiFetch('/api/users', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('ai-mis.access-token') ?? ''}` },
+    })
     if (!response.ok) throw new Error(`Unable to load users (HTTP ${response.status}).`)
     users.value = await response.json()
   } catch (exception) { error.value = exception instanceof Error ? exception.message : 'Unable to load users.' }
@@ -22,8 +25,9 @@ async function load() {
 function edit(user: ManagedUser) { editing.value = user; role.value = user.roles[0] ?? ''; branches.value = user.branchCodes.join(', ') }
 async function save() {
   if (!editing.value) return
-  const response = await fetch(`http://localhost:5252/api/users/${editing.value.id}/access`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('ai-mis.access-token')}` },
+  const response = await apiFetch(`/api/users/${editing.value.id}/access`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('ai-mis.access-token') ?? ''}` },
     body: JSON.stringify({ role: role.value, branchCodes: branches.value.split(',').map(value => value.trim()).filter(Boolean), isActive: editing.value.isActive }),
   })
   if (!response.ok) { error.value = `Access update failed (HTTP ${response.status}).`; return }
