@@ -1,6 +1,36 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
 
 namespace AI.MIS.Domain.Entities;
+
+public class OperationPermission
+{
+    public string ScreenOperationCode { get; set; } = string.Empty;
+    public string RoleCode { get; set; } = string.Empty;
+}
+
+public class Module
+{
+    public string Name { get; set; } = string.Empty;
+}
+
+public class Notification_Info
+{
+    public string Message { get; set; } = string.Empty;
+}
+
+public class PermissionBaseResponse : BaseResponse
+{
+    public object? Data { get; set; }
+}
+
+public enum RoleList
+{
+    MicrofinanceProgramAdmin,
+    SMEProgramAdmin
+}
 
 public class UserSession
 {
@@ -33,10 +63,10 @@ public class UserSession
     public string HealthCenterName { get; set; }
     public string PhotoURL { get; set; }
 
-    public IList<string> Roles { get; set; }
-    public IList<OperationPermission> OperationPermissionList { get; set; }
-    public IList<Module> ModuleList { get; set; }
-    public IList<Notification_Info> NotificationList { get; set; }
+    public IList<string> Roles { get; set; } = new List<string>();
+    public IList<OperationPermission> OperationPermissionList { get; set; } = new List<OperationPermission>();
+    public IList<Module> ModuleList { get; set; } = new List<Module>();
+    public IList<Notification_Info> NotificationList { get; set; } = new List<Notification_Info>();
     public bool IsProduction { get; set; }
     public string GenericPostCode { get; set; }
     public bool IsHoliday { get; set; }

@@ -1,5 +1,6 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { apiFetch } from '../config/api'
 import defaultProfileImageUrl from '../assets/default-profile.png'
 
 const emit = defineEmits<{ back: [] }>()
@@ -80,7 +81,7 @@ async function create() {
     data.append('branchCodes', form.value.branchCodes)
     if (profileImage.value) data.append('profileImage', profileImage.value)
 
-    const response = await fetch('http://localhost:5252/api/users', {
+    const response = await apiFetch('/api/users', {
       method: 'POST',
       headers: { Authorization: `Bearer ${localStorage.getItem('ai-mis.access-token') ?? ''}` },
       body: data,

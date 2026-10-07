@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { apiFetch } from '../config/api'
 import type { LoginResponse } from '../types/auth'
 
 const tokenKey = 'ai-mis.access-token'
@@ -16,7 +17,7 @@ export function useAuth() {
     loading.value = true
     error.value = ''
     try {
-      const response = await fetch('http://localhost:5252/api/auth/login', {
+      const response = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userName: userNameInput.trim(), password }),

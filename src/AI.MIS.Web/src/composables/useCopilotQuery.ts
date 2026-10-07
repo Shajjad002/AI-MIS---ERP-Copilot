@@ -1,4 +1,5 @@
-import { ref } from 'vue'
+﻿import { ref } from 'vue'
+import { apiFetch } from '../config/api'
 import type { QueryResponse } from '../types/copilot'
 
 export function useCopilotQuery() {
@@ -17,9 +18,12 @@ export function useCopilotQuery() {
     response.value = null
     try {
       const token = localStorage.getItem('ai-mis.access-token')
-      const result = await fetch('http://localhost:5252/api/copilot/query', {
+      const result = await apiFetch('/api/copilot/query', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ question: question.trim() }),
       })
       const contentType = result.headers.get('content-type') ?? ''

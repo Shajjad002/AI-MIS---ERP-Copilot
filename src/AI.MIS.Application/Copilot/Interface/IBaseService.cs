@@ -22,4 +22,4 @@ public interface IBaseService<T> where T : BaseEntity
     Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> criteria, params string[] navigations);
     Task<T> FirstOrDefaultAsync(ISpecification<T> spec);
     Task UpdateAsync(T entity, params Expression<Func<T, object>>[] properties);
-}}
+}

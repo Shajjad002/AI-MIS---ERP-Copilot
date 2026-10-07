@@ -2,11 +2,40 @@
 
 ## Business Analysis (BA) & Software Requirements Specification (SRS)
 
-**Version:** 1.0\
+**Version:** 1.1\
 **Project Type:** AI-powered Enterprise MIS / ERP Assistant\
 **Architecture:** ASP.NET Core + Vue + SQL Server + LLM + RAG\
 **Primary Users:** Management, MIS, Finance, Operations, IT,
 Branch/Regional Users
+
+**Implementation status reviewed:** 2026-10-07
+
+## Current Implementation Status
+
+This document contains both implemented requirements and proposed
+capabilities. A requirement described in the SRS is not necessarily
+available in the current application unless its status is marked
+**Implemented** below.
+
+| Sprint | Status | Current scope |
+| --- | --- | --- |
+| Sprint 1 — Foundation | Implemented | Clean Architecture solution, Vue application, database-backed JWT authentication, and user/branch access foundations. |
+| Sprint 2 — AI Integration | Implemented | OpenAI-compatible LLM integration, structured interpretation, and controlled schema metadata. |
+| Sprint 3 — Text-to-SQL | Implemented | SQL proposal, validation, read-only execution, and branch-scope enforcement. |
+| Sprint 4 — Visualization | Implemented | Query UI, KPI/result summary, result table, and basic charts. |
+| Sprint 5 — Security | Implemented | JWT authorization, branch restrictions, audit logging, query timeout, and rate limiting. |
+| Sprint 6 — RAG | Implemented | Authenticated document indexing, local vector search, and grounded answers with citations. Provider credentials/configuration are required for live LLM and embedding calls. |
+| Sprint 7 — Reporting | Incomplete / planned | Saved reports, Excel/PDF export, and scheduled reports are not yet implemented. |
+
+The application also includes implemented administrator menu management:
+persisted menu entries, role-based menu visibility, custom menu-only
+roles, and per-user custom menu-role assignments. These roles do not
+grant API access. Actual API authorization continues to use the system
+JWT roles.
+
+The sprint statuses describe the current codebase, not production
+readiness or formal stakeholder acceptance. The roadmap and backlog
+should be updated as requirements are accepted or delivered.
 
 ------------------------------------------------------------------------
 
@@ -282,6 +311,16 @@ Can access data according to assigned Area/Region permissions.
 
 ------------------------------------------------------------------------
 
+## 7.6 Menu Visibility Roles
+
+Administrators may define custom menu-only roles and assign them to
+users to control which navigation entries are shown. These assignments
+are separate from the user's system security roles. They do not grant
+access to API endpoints, documents, data, or operations protected by the
+system authorization policies.
+
+------------------------------------------------------------------------
+
 # 8. Major Use Cases
 
 ## UC-01: Ask Business Question
@@ -440,6 +479,22 @@ The system may generate:
 
 ------------------------------------------------------------------------
 
+## UC-08: Manage Menu Visibility
+
+**Actor:** System Administrator
+
+The administrator can create and edit navigation entries, choose a
+supported application destination, group and order entries, enable or
+disable entries, and select which system or custom menu-only roles can
+see each entry. The administrator can also create custom menu-only roles
+and assign them to users.
+
+The application loads each authenticated user's visible menu entries.
+Menu visibility is a presentation/navigation feature only; protected API
+operations continue to enforce system-role authorization independently.
+
+------------------------------------------------------------------------
+
 # 9. Business Rules
 
 ## BR-001 --- Authorization
@@ -517,6 +572,15 @@ EIN
 ```
 
 Business definitions must be maintained in a controlled knowledge base.
+
+------------------------------------------------------------------------
+
+## BR-006 --- Menu Visibility Is Not Authorization
+
+Menu-role grants may control the navigation entries shown to a user but
+must never be treated as API authorization or data-access permission.
+All protected API endpoints must continue to enforce their existing
+system-role and data-scope policies.
 
 ------------------------------------------------------------------------
 
@@ -816,6 +880,43 @@ or:
 
 ------------------------------------------------------------------------
 
+### FR-017 Menu Catalog
+
+**Status: Implemented**
+
+The system shall persist menu entries with a label, sidebar section,
+supported destination, icon, display order, enabled state, and one or
+more menu visibility roles. Administrators shall be able to create,
+update, list, and delete menu entries. Destinations shall be restricted
+to implemented application screens.
+
+------------------------------------------------------------------------
+
+### FR-018 Menu Visibility and Custom Menu Roles
+
+**Status: Implemented**
+
+The system shall return enabled menu entries visible to the
+authenticated user based on their system-role claims and assigned
+custom menu-only roles. Administrators shall be able to create custom
+menu-only roles and assign or remove those roles for a user.
+
+Custom menu-only roles shall not grant API access, change system roles,
+or bypass endpoint authorization.
+
+------------------------------------------------------------------------
+
+### FR-019 Administrator Menu Management UI
+
+**Status: Implemented**
+
+The web application shall provide an administrator-only screen to
+manage menu entries and menu-only roles, assign custom menu-only roles
+to users, and show menu visibility assignments. Menu administration
+write operations shall require the Administrator system role.
+
+------------------------------------------------------------------------
+
 # 11. RAG Architecture
 
 ``` text
@@ -941,19 +1042,16 @@ The backend should follow:
 ``` text
 Vue 3
 TypeScript
-Chart.js
-Axios
+Fetch API
+Dependency-free SVG/CSS visualizations
 ```
 
 ## Backend
 
 ``` text
-.NET 8
+.NET 9
 ASP.NET Core Web API
 C#
-Entity Framework Core
-Dapper where appropriate
-CQRS
 Clean Architecture
 ```
 
@@ -981,6 +1079,10 @@ Nginx / IIS
 Redis (optional)
 Vector Database
 ```
+
+The current implementation uses a local persistent vector index. The
+stack in this section is a proposed/target stack where it differs from
+the current implementation.
 
 ------------------------------------------------------------------------
 
@@ -1087,6 +1189,25 @@ GET /api/reports/{id}
 POST /api/reports/{id}/export
 ```
 
+## Menu Management
+
+``` http
+GET    /api/menus
+GET    /api/menus/manage
+POST   /api/menus
+PUT    /api/menus/{id}
+DELETE /api/menus/{id}
+GET    /api/menus/roles
+POST   /api/menus/roles
+GET    /api/menus/users/{userId}/roles
+PUT    /api/menus/users/{userId}/roles
+```
+
+`GET /api/menus` returns the authenticated user's enabled, role-visible
+menu entries. Menu-management operations are administrator-only.
+Custom menu roles control navigation visibility and do not authorize API
+access.
+
 ## Knowledge
 
 ``` http
@@ -1127,6 +1248,13 @@ ScheduledReport
 
 AuditLog
 ```
+
+The implemented menu-management migration adds
+`MenuRoleDefinitions`, `MenuItems`, `MenuItemRoles`, and `UserMenuRoles`.
+Apply `database/Tables/005_MenuManagement.sql` to the application
+database before using menu management. User menu-role assignments refer
+only to custom menu roles; system roles remain in the existing identity
+and authorization model.
 
 ------------------------------------------------------------------------
 
@@ -1319,22 +1447,24 @@ Collection Rate:
 
 # 22. MVP Scope
 
-The first release should focus on the following:
+Current implementation status (not a claim that every proposed
+capability is complete):
 
 ``` text
 [✓] Login
 [✓] User authorization
-[✓] Chat interface
-[✓] Natural-language questions
+[✓] Natural-language MIS query interface
+[✓] Natural-language question interpretation
 [✓] Schema metadata
-[✓] AI SQL generation
-[✓] SQL validation
-[✓] Read-only SQL execution
+[✓] SQL proposal, validation, and read-only execution
 [✓] Table results
 [✓] Basic charts
-[✓] AI summary
-[✓] Query history
+[✓] Result summary and visualization
 [✓] Audit log
+[✓] Document-grounded RAG answers with citations
+[✓] Administrator menu management and menu-only visibility roles
+[ ] Conversation/query history UI
+[ ] User feedback collection
 ```
 
 ------------------------------------------------------------------------
@@ -1342,9 +1472,8 @@ The first release should focus on the following:
 # 23. Phase 2
 
 ``` text
-[ ] RAG
-[ ] PDF/DOCX knowledge base
-[ ] Business rules
+[✓] RAG for supported document types (PDF, DOCX, TXT, Markdown)
+[✓] Retrieval of business rules and policy documents
 [ ] Excel export
 [ ] PDF export
 [ ] Saved reports
@@ -1368,7 +1497,11 @@ The first release should focus on the following:
 
 # 25. Development Roadmap
 
-## Sprint 1 --- Foundation
+Sprint status reflects implementation in the current codebase as of
+2026-10-07. It is not a statement of production readiness or formal
+stakeholder sign-off.
+
+## Sprint 1 --- Foundation — Implemented
 
 -   Solution architecture
 -   Authentication
@@ -1377,28 +1510,28 @@ The first release should focus on the following:
 -   Base API
 -   Vue application
 
-## Sprint 2 --- AI Integration
+## Sprint 2 --- AI Integration — Implemented
 
 -   LLM integration
 -   Prompt management
 -   Structured AI response
 -   Schema metadata
 
-## Sprint 3 --- Text-to-SQL
+## Sprint 3 --- Text-to-SQL — Implemented
 
 -   SQL generation
 -   SQL parser
 -   Query validation
 -   Read-only execution
 
-## Sprint 4 --- Visualization
+## Sprint 4 --- Visualization — Implemented
 
 -   Tables
 -   KPI cards
 -   Charts
 -   AI summary
 
-## Sprint 5 --- Security
+## Sprint 5 --- Security — Implemented
 
 -   Branch filtering
 -   Role filtering
@@ -1406,19 +1539,24 @@ The first release should focus on the following:
 -   Query timeout
 -   Rate limiting
 
-## Sprint 6 --- RAG
+## Sprint 6 --- RAG — Implemented
 
 -   Document upload
 -   Embeddings
 -   Vector search
 -   Business-rule retrieval
 
-## Sprint 7 --- Reporting
+## Sprint 7 --- Reporting — Incomplete / Planned
 
 -   Excel export
 -   PDF export
 -   Saved reports
 -   Scheduled reports
+
+Menu administration is implemented alongside these sprints: menu
+catalog maintenance, system-role visibility grants, custom menu-only
+roles, and per-user custom menu-role assignments. It does not represent
+API permission administration.
 
 ------------------------------------------------------------------------
 
@@ -1534,22 +1672,25 @@ Example:
 
 # 29. Acceptance Criteria
 
-The MVP will be considered successful when:
+The following criteria define the intended MVP. Their current status
+records implementation evidence only and does not substitute for
+formal business acceptance:
 
-1.  An authorized user can log in.
-2.  A user can ask a natural-language MIS question.
-3.  The AI can identify the intended metric and filters.
-4.  The AI can generate SQL using approved schema metadata.
-5.  Unsafe SQL is rejected.
-6.  User authorization is applied to the query.
-7.  Valid read-only SQL can execute successfully.
-8.  Results are displayed in a table.
-9.  Suitable results can be displayed as charts.
-10. The AI can summarize results.
-11. Conversations are stored.
-12. Queries are auditable.
-13. Unauthorized data cannot be accessed through prompt manipulation.
-14. AI-service failure does not cause ERP data modification.
+1.  **Implemented:** An authorized user can log in.
+2.  **Implemented:** A user can submit a natural-language MIS question.
+3.  **Implemented:** The AI can interpret a query using configured schema metadata.
+4.  **Implemented:** Proposed SQL is validated before read-only execution.
+5.  **Implemented:** Unsafe SQL is rejected.
+6.  **Implemented:** System role and branch scope are applied to protected query access.
+7.  **Implemented:** Valid read-only SQL can execute against a configured database.
+8.  **Implemented:** Results can be displayed in a table and basic charts.
+9.  **Implemented:** Query results include a generated summary.
+10. **Implemented:** Query outcomes are audit logged.
+11. **Implemented:** Administrators can manage menu entries and menu visibility roles.
+12. **Implemented:** Custom menu-only roles do not bypass protected API authorization.
+13. **Not implemented:** Persistent conversation/query history for users.
+14. **Not implemented:** Saved reports, report exports, and scheduled reports.
+15. **Requires deployment validation:** Production provider configuration, deployment security, performance targets, and formal acceptance.
 
 ------------------------------------------------------------------------
 
