@@ -10,4 +10,3 @@ public interface IMISReportService : IBaseService<LoanTransactionReportSP>
 {
     Task<BaseResponse> GetBranchPortfolioReport(ReportParameterViewModel viewModel);
 }
-
