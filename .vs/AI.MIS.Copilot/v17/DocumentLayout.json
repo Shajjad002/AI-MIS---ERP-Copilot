@@ -1,0 +1,103 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\MyProject\\AI MIS \u0026 ERP Copilot\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{6174CB87-1A74-40B1-ABC6-B2C7541F9AC4}|src\\AI.MIS.Api\\AI.MIS.Api.csproj|d:\\myproject\\ai mis \u0026 erp copilot\\src\\ai.mis.api\\controllers\\misreportcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6174CB87-1A74-40B1-ABC6-B2C7541F9AC4}|src\\AI.MIS.Api\\AI.MIS.Api.csproj|solutionrelative:src\\ai.mis.api\\controllers\\misreportcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{216D6EE5-2670-495A-932C-64BB55CC358F}|src\\AI.MIS.Infrastructure\\AI.MIS.Infrastructure.csproj|d:\\myproject\\ai mis \u0026 erp copilot\\src\\ai.mis.infrastructure\\misreport\\misreportservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{216D6EE5-2670-495A-932C-64BB55CC358F}|src\\AI.MIS.Infrastructure\\AI.MIS.Infrastructure.csproj|solutionrelative:src\\ai.mis.infrastructure\\misreport\\misreportservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5DD83D74-7896-467A-84C1-F89F9AE4222D}|src\\AI.MIS.Application\\AI.MIS.Application.csproj|d:\\myproject\\ai mis \u0026 erp copilot\\src\\ai.mis.application\\copilot\\interface\\ibaseservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5DD83D74-7896-467A-84C1-F89F9AE4222D}|src\\AI.MIS.Application\\AI.MIS.Application.csproj|solutionrelative:src\\ai.mis.application\\copilot\\interface\\ibaseservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 8,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:129:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:130:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:135:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{75188d03-9892-4ae2-abf1-207126247ce5}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "IBaseService.cs",
+              "DocumentMoniker": "D:\\MyProject\\AI MIS \u0026 ERP Copilot\\src\\AI.MIS.Application\\Copilot\\Interface\\IBaseService.cs",
+              "RelativeDocumentMoniker": "src\\AI.MIS.Application\\Copilot\\Interface\\IBaseService.cs",
+              "ToolTip": "D:\\MyProject\\AI MIS \u0026 ERP Copilot\\src\\AI.MIS.Application\\Copilot\\Interface\\IBaseService.cs",
+              "RelativeToolTip": "src\\AI.MIS.Application\\Copilot\\Interface\\IBaseService.cs",
+              "ViewState": "AgIAAAoAAAAAAAAAAAAzwAgAAAAMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-11T11:10:35.015Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "MISReportService.cs",
+              "DocumentMoniker": "D:\\MyProject\\AI MIS \u0026 ERP Copilot\\src\\AI.MIS.Infrastructure\\MISReport\\MISReportService.cs",
+              "RelativeDocumentMoniker": "src\\AI.MIS.Infrastructure\\MISReport\\MISReportService.cs",
+              "ToolTip": "D:\\MyProject\\AI MIS \u0026 ERP Copilot\\src\\AI.MIS.Infrastructure\\MISReport\\MISReportService.cs",
+              "RelativeToolTip": "src\\AI.MIS.Infrastructure\\MISReport\\MISReportService.cs",
+              "ViewState": "AgIAAOIAAAAAAAAAAAApwOoAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-11T06:14:29.59Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "MISReportController.cs",
+              "DocumentMoniker": "D:\\MyProject\\AI MIS \u0026 ERP Copilot\\src\\AI.MIS.Api\\Controllers\\MISReportController.cs",
+              "RelativeDocumentMoniker": "src\\AI.MIS.Api\\Controllers\\MISReportController.cs",
+              "ToolTip": "D:\\MyProject\\AI MIS \u0026 ERP Copilot\\src\\AI.MIS.Api\\Controllers\\MISReportController.cs",
+              "RelativeToolTip": "src\\AI.MIS.Api\\Controllers\\MISReportController.cs",
+              "ViewState": "AgIAAA4AAAAAAAAAAAAxwIsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-11T05:35:58.552Z",
+              "EditorCaption": ""
+            }
+          ]
+        },
+        {
+          "DockedWidth": 450,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d98f7c4d-b652-422c-bcdf-3d0e2b2da2c1}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

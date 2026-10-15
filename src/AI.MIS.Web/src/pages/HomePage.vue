@@ -1,22 +1,252 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { apiFetch } from '../config/api'
 
 const props = defineProps<{ userName: string | null }>()
 const emit = defineEmits<{ openVisualization: [] }>()
-const chartPeriod = ref('Daily')
 const chartMode = ref('line')
 
-const topCards = [
-  { label: 'Total Revenue', value: '$2,480,539', delta: '↑ 18.6% vs Apr 1 - Apr 30', tone: 'orange' },
-  { label: 'Users', value: '1,234,333', delta: '↑ 12.4% vs Apr 1 - Apr 30', tone: 'blue' },
-  { label: 'Conversion Rate', value: '3.42%', delta: '↑ 8.7% vs Apr 1 - Apr 30', tone: 'purple' },
-  { label: 'Avg. Order Value', value: '$1,245', delta: '↓ 1.32% vs Apr 1 - Apr 30', tone: 'green' },
-  { label: 'Churn Rate', value: '3.21%', delta: '↓ 0.53% vs Apr 1 - Apr 30', tone: 'red' },
-]
+type PortfolioRow = {
+  branch?: string
+  branchName?: string
+  branchCode?: string
+  area?: string
+  areaName?: string
+  areaCode?: string
+  region?: string
+  regionName?: string
+  regionCode?: string
+  zone?: string
+  zoneName?: string
+  zoneCode?: string
+  disbursement: number
+}
 
-const chartLabels = ['May 1', 'May 6', 'May 11', 'May 16', 'May 21', 'May 26', 'May 31']
-const revenueValues = [220, 190, 205, 230, 290, 295, 245, 195, 190, 165, 175, 225, 235, 185, 170, 175, 230, 240, 225, 205, 185, 195, 215, 230, 240, 235, 205, 215, 360, 325, 295]
-const expectedRevenueValues = [215, 205, 200, 210, 225, 235, 225, 215, 205, 200, 205, 215, 225, 215, 205, 200, 210, 220, 225, 220, 215, 215, 225, 235, 245, 240, 230, 235, 245, 250, 255]
+type PortfolioMetrics = {
+  avarageSavingsOutstandingRatio: number
+  avaragePARRatio: number
+  avarageOTR: number
+  avarageOverdueOutstandingRatio: number
+  totalDisbursement: number
+  totalMember: number
+  totalBorrower: number
+  totalOverdueBorrower: number
+  branchProtfolioList?: PortfolioRow[]
+  areaWiseBranchProtfolioList?: PortfolioRow[]
+  regionWiseBranchProtfolioList?: PortfolioRow[]
+  zoneWiseBranchProtfolioList?: PortfolioRow[]
+}
+
+type DashboardResponse = {
+  isSuccessful: boolean
+  message: string
+  data?: {
+    branchPortfolio?: PortfolioMetrics
+  }
+}
+
+const now = new Date()
+const currentDate = formatDate(now)
+const dateRangeStart = ref(formatDate(new Date(now.getFullYear(), now.getMonth(), 1)))
+const dateRangeEnd = ref(currentDate)
+const selectedViewBy = ref('Zone')
+const viewByOptions = ['Zone', 'Region', 'Area', 'Branch']
+const dashboardMetrics = ref<PortfolioMetrics | null>(null)
+const dailyDisbursementSeries = ref<Array<{ date: string; label: string; value: number }>>([])
+const dashboardLoading = ref(false)
+const dailyDisbursementLoading = ref(false)
+const dashboardError = ref('')
+const dailyDisbursementError = ref('')
+let dashboardLoadId = 0
+let activeDashboardRequest: AbortController | null = null
+const topCards = computed(() => [
+  { label: 'Savings / Outstanding Ratio(%)', value: formatMetric(dashboardMetrics.value?.avarageSavingsOutstandingRatio), tone: 'orange' },
+  { label: 'PAR(%)', value: formatMetric(dashboardMetrics.value?.avaragePARRatio), tone: 'blue' },
+  { label: 'OTR(%)', value: formatMetric(dashboardMetrics.value?.avarageOTR), tone: 'purple' },
+  { label: 'Overdue / Outstanding Ratio(%)', value: formatMetric(dashboardMetrics.value?.avarageOverdueOutstandingRatio), tone: 'green' },
+  { label: 'Churn Rate', value: '3.21%', tone: 'red' },
+])
+
+function formatDate(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function formatMetric(value: number | undefined) {
+  return value === undefined || !Number.isFinite(value) ? '—' : `${value.toFixed(2)}%`
+}
+
+async function loadDashboard() {
+  const loadId = ++dashboardLoadId
+  activeDashboardRequest?.abort()
+  const controller = new AbortController()
+  activeDashboardRequest = controller
+  dashboardLoading.value = true
+  dailyDisbursementLoading.value = false
+  dashboardError.value = ''
+  dailyDisbursementError.value = ''
+  dailyDisbursementSeries.value = []
+
+  let dates: string[] = []
+
+  try {
+    const token = localStorage.getItem('ai-mis.access-token')
+    if (!token) {
+      throw new Error('Sign in to load dashboard metrics.')
+    }
+
+    const cursor = new Date(`${dateRangeStart.value}T00:00:00`)
+    const rangeEnd = new Date(`${dateRangeEnd.value}T00:00:00`)
+    if (cursor > rangeEnd) {
+      throw new Error('The start date must be on or before the end date.')
+    }
+    while (cursor <= rangeEnd) {
+      if (dates.length === 31) {
+        throw new Error('Daily disbursement charts support date ranges of up to 31 days. Select a shorter range.')
+      }
+      dates.push(formatDate(cursor))
+      cursor.setDate(cursor.getDate() + 1)
+    }
+
+    const requestPortfolio = async (fromDate: string, toDate: string, summaryOnly = false) => {
+      const params = new URLSearchParams({
+        fromDate,
+        toDate,
+        programCode: '001',
+        divisionCode: '',
+        zoneCode: '',
+        regionCode: '',
+        areaCode: '',
+        viewBy: selectedViewBy.value,
+        branchCode: '',
+      })
+      if (summaryOnly) params.set('summaryOnly', 'true')
+      const response = await apiFetch(`/api/misReports?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      })
+      const body = await response.json() as DashboardResponse
+      if (!response.ok) {
+        throw new Error(body.message || `Dashboard request failed (HTTP ${response.status}).`)
+      }
+      if (!body.isSuccessful && body.message !== 'No Data Found') {
+        throw new Error(body.message || 'Dashboard report could not be loaded.')
+      }
+      return body.isSuccessful ? body.data?.branchPortfolio ?? null : null
+    }
+
+    const portfolio = await requestPortfolio(dateRangeStart.value, dateRangeEnd.value)
+    if (loadId !== dashboardLoadId) return
+    if (!portfolio) {
+      throw new Error('No dashboard data was returned for this date range.')
+    }
+    dashboardMetrics.value = portfolio
+    dashboardLoading.value = false
+    dailyDisbursementLoading.value = true
+    try {
+      const dailyValues = new Array<{ date: string; total: number } | undefined>(dates.length)
+      const dateLabel = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' })
+      let nextDateIndex = 0
+      const loadNextDate = async () => {
+        while (nextDateIndex < dates.length && loadId === dashboardLoadId) {
+          const index = nextDateIndex++
+          const date = dates[index]
+          const portfolio = await requestPortfolio(date, date, true)
+          if (loadId !== dashboardLoadId) return
+          dailyValues[index] = { date, total: portfolio?.totalDisbursement ?? 0 }
+          dailyDisbursementSeries.value = dailyValues.flatMap(item => item
+            ? [{
+                date: item.date,
+                label: dateLabel.format(new Date(`${item.date}T00:00:00`)),
+                value: item.total,
+              }]
+            : [])
+        }
+      }
+
+      await Promise.all(Array.from(
+        { length: Math.min(4, dates.length) },
+        () => loadNextDate(),
+      ))
+      if (loadId !== dashboardLoadId) return
+    } catch (error) {
+      if (loadId !== dashboardLoadId) return
+      dailyDisbursementError.value = error instanceof Error
+        ? error.message
+        : 'Daily disbursement data could not be loaded.'
+    }
+  } catch (error) {
+    if (loadId !== dashboardLoadId) return
+    dashboardMetrics.value = null
+    dashboardError.value = error instanceof Error ? error.message : 'Dashboard metrics could not be loaded.'
+  } finally {
+    if (loadId === dashboardLoadId) {
+      dashboardLoading.value = false
+      dailyDisbursementLoading.value = false
+    }
+  }
+}
+
+onBeforeUnmount(() => {
+  dashboardLoadId += 1
+  activeDashboardRequest?.abort()
+})
+
+onMounted(() => void loadDashboard())
+
+const disbursementTotal = computed(() => dashboardMetrics.value?.totalDisbursement ?? 0)
+const formattedDisbursementTotal = computed(() => new Intl.NumberFormat('en-BD', {
+  maximumFractionDigits: 0,
+}).format(disbursementTotal.value))
+const formatAmount = (value: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)
+const rowsByView = computed(() => {
+  const portfolio = dashboardMetrics.value
+  if (!portfolio) return []
+  switch (selectedViewBy.value) {
+    case 'Region':
+      return portfolio.regionWiseBranchProtfolioList ?? []
+    case 'Area':
+      return portfolio.areaWiseBranchProtfolioList ?? []
+    case 'Branch':
+      return portfolio.branchProtfolioList ?? []
+    default:
+      return portfolio.zoneWiseBranchProtfolioList ?? []
+  }
+})
+function getPortfolioRowLabel(row: PortfolioRow) {
+  switch (selectedViewBy.value) {
+    case 'Region':
+      return row.region || [row.regionName, row.regionCode ? `(${row.regionCode})` : ''].filter(Boolean).join(' ')
+    case 'Area':
+      return row.area || [row.areaName, row.areaCode ? `(${row.areaCode})` : ''].filter(Boolean).join(' ')
+    case 'Branch':
+      return row.branch || [row.branchName, row.branchCode ? `(${row.branchCode})` : ''].filter(Boolean).join(' ')
+    default:
+      return row.zone || [row.zoneName, row.zoneCode ? `(${row.zoneCode})` : ''].filter(Boolean).join(' ')
+  }
+}
+const viewDisbursementSeries = computed(() => rowsByView.value
+  .filter(zone => Number.isFinite(zone.disbursement))
+  .map(row => ({
+    label: getPortfolioRowLabel(row) || selectedViewBy.value,
+    value: row.disbursement,
+  }))
+  .sort((left, right) => right.value - left.value))
+const maximumViewDisbursement = computed(() => Math.max(...viewDisbursementSeries.value.map(zone => zone.value), 0))
+const chartLabels = computed(() => {
+  const series = dailyDisbursementSeries.value
+  if (series.length <= 7) return series.map(item => item.label)
+  return Array.from({ length: 7 }, (_, index) => series[Math.round(index * (series.length - 1) / 6)].label)
+})
+const disbursementValues = computed(() => dailyDisbursementSeries.value.map(item => item.value))
+const chartMaximum = computed(() => {
+  const maximum = Math.max(...disbursementValues.value, 0)
+  if (maximum === 0) return 1
+  const magnitude = 10 ** Math.floor(Math.log10(maximum))
+  return Math.ceil(maximum / magnitude) * magnitude
+})
 const channelRows = [
   { name: 'Website', value: 42, color: '#f59e0b' },
   { name: 'Mobile', value: 27, color: '#fbbf24' },
@@ -24,21 +254,36 @@ const channelRows = [
   { name: 'Retail', value: 9, color: '#f59e0b' },
   { name: 'Wholesale', value: 5, color: '#b45309' },
 ]
-
-const segments = [
-  { label: 'New Users', value: 36.4, color: '#3b82f6' },
-  { label: 'Returning', value: 28.1, color: '#f97316' },
-  { label: 'Enterprise', value: 17.7, color: '#a78bfa' },
-  { label: 'Partners', value: 11.3, color: '#14b8a6' },
-  { label: 'Other', value: 6.5, color: '#eab308' },
+const anomalies = [
+  { metric: 'Revenue', date: 'May 29, 2025', impact: 'High', confidence: '92%', severity: 'high' },
+  { metric: 'Accounts', date: 'May 24, 2025', impact: 'Medium', confidence: '86%', severity: 'medium' },
+  { metric: 'Traffic', date: 'May 18, 2025', impact: 'Medium', confidence: '76%', severity: 'medium' },
+  { metric: 'Support', date: 'May 12, 2025', impact: 'Low', confidence: '65%', severity: 'low' },
+  { metric: 'Marketing', date: 'May 7, 2025', impact: 'Low', confidence: '60%', severity: 'low' },
 ]
-const dateRangeStart = ref('2025-05-01')
-const dateRangeEnd = ref('2025-05-31')
-const selectedSegments = ref(segments.map(segment => segment.label))
+
+const selectedSegments = ref(['Non-borrower members', 'Current borrowers', 'OD borrowers'])
 const datePickerOpen = ref(false)
 const filtersOpen = ref(false)
-const visibleSegments = computed(() => segments.filter(segment => selectedSegments.value.includes(segment.label)))
-const userCount = computed(() => Math.round(1_234_333 * visibleSegments.value.reduce((total, segment) => total + segment.value, 0) / 100))
+const memberTotal = computed(() => dashboardMetrics.value?.totalMember ?? 0)
+const borrowerTotal = computed(() => dashboardMetrics.value?.totalBorrower ?? 0)
+const overdueBorrowerTotal = computed(() => dashboardMetrics.value?.totalOverdueBorrower ?? 0)
+const formatWholeNumber = (value: number) => new Intl.NumberFormat('en-BD', { maximumFractionDigits: 0 }).format(value)
+const memberSegments = computed(() => {
+  const totalMembers = memberTotal.value
+  const totalBorrowers = Math.min(borrowerTotal.value, totalMembers)
+  const overdueBorrowers = Math.min(overdueBorrowerTotal.value, totalBorrowers)
+  const segments = [
+    { label: 'Non-borrower members', count: totalMembers - totalBorrowers, color: '#3b82f6' },
+    { label: 'Current borrowers', count: totalBorrowers - overdueBorrowers, color: '#f97316' },
+    { label: 'OD borrowers', count: overdueBorrowers, color: '#a78bfa' },
+  ]
+  return segments.map(segment => ({
+    ...segment,
+    percentage: totalMembers > 0 ? segment.count / totalMembers * 100 : 0,
+  }))
+})
+const visibleSegments = computed(() => memberSegments.value.filter(segment => selectedSegments.value.includes(segment.label)))
 const formattedDateRange = computed(() => {
   if (!dateRangeStart.value || !dateRangeEnd.value) return 'Select date range'
   const start = new Date(`${dateRangeStart.value}T00:00:00`)
@@ -48,49 +293,35 @@ const formattedDateRange = computed(() => {
   return `${monthDay.format(start)} – ${monthDay.format(end)}, ${year.format(end)}`
 })
 
-const anomalies = [
-  { metric: 'Revenue', date: 'May 29, 2025', impact: 'High', confidence: '92%', severity: 'high' },
-  { metric: 'Accounts', date: 'May 24, 2025', impact: 'Medium', confidence: '86%', severity: 'medium' },
-  { metric: 'Traffic', date: 'May 18, 2025', impact: 'Medium', confidence: '76%', severity: 'medium' },
-  { metric: 'Support', date: 'May 12, 2025', impact: 'Low', confidence: '65%', severity: 'low' },
-  { metric: 'Marketing', date: 'May 7, 2025', impact: 'Low', confidence: '60%', severity: 'low' },
-]
-
 const chartPlot = { left: 42, top: 12, width: 650, height: 204 }
-function revenuePoint(value: number, index: number) {
-  const x = chartPlot.left + index / (revenueValues.length - 1) * chartPlot.width
-  const y = chartPlot.top + chartPlot.height * (1 - value / 400)
+function disbursementPoint(value: number, index: number) {
+  const series = disbursementValues.value
+  const x = chartPlot.left + (series.length <= 1 ? 0 : index / (series.length - 1) * chartPlot.width)
+  const y = chartPlot.top + chartPlot.height * (1 - value / chartMaximum.value)
   return { x, y }
 }
-const revenueLinePath = computed(() => revenueValues.map((value, index) => {
-  const point = revenuePoint(value, index)
+const disbursementLinePath = computed(() => disbursementValues.value.map((value, index) => {
+  const point = disbursementPoint(value, index)
   return `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`
 }).join(' '))
-const expectedLinePath = computed(() => expectedRevenueValues.map((value, index) => {
-  const point = revenuePoint(value, index)
-  return `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`
-}).join(' '))
-const revenueAreaPath = computed(() => {
-  const points = revenueValues.map((value, index) => revenuePoint(value, index))
+const disbursementAreaPath = computed(() => {
+  const points = disbursementValues.value.map((value, index) => disbursementPoint(value, index))
+  if (points.length === 0) return ''
   const lastPoint = points[points.length - 1]
-  return `${revenueLinePath.value} L${lastPoint.x.toFixed(1)},${(chartPlot.top + chartPlot.height).toFixed(1)} L${points[0].x.toFixed(1)},${(chartPlot.top + chartPlot.height).toFixed(1)} Z`
+  return `${disbursementLinePath.value} L${lastPoint.x.toFixed(1)},${(chartPlot.top + chartPlot.height).toFixed(1)} L${points[0].x.toFixed(1)},${(chartPlot.top + chartPlot.height).toFixed(1)} Z`
 })
-const anomalyPoint = computed(() => revenuePoint(revenueValues[28], 28))
-const anomalyX = computed(() => anomalyPoint.value.x)
-
-const contributingFactors = [
-  { label: 'New Users (Organic Search)', value: '+67%', width: '67%', icon: 'user' },
-  { label: 'Avg. Order Value Increase', value: '+23%', width: '23%', icon: 'cart' },
-  { label: 'Marketing Campaign: Spring Sale', value: '+18%', width: '18%', icon: 'campaign' },
-]
+const chartAxisLabels = computed(() => [4, 3, 2, 1, 0].map(fraction => (
+  new Intl.NumberFormat('en-BD', { notation: 'compact', maximumFractionDigits: 1 })
+    .format(chartMaximum.value * fraction / 4)
+)))
 
 const donutSegments = computed(() => {
   let cumulative = 0
-  const visibleTotal = visibleSegments.value.reduce((total, segment) => total + segment.value, 0)
+  const visibleTotal = visibleSegments.value.reduce((total, segment) => total + segment.count, 0)
   if (visibleTotal === 0) return '#253247 0% 100%'
   return visibleSegments.value.map(segment => {
     const start = cumulative
-    cumulative += segment.value / visibleTotal * 100
+    cumulative += segment.count / visibleTotal * 100
     const end = cumulative
     return `${segment.color} ${start}% ${end}%`
   }).join(', ')
@@ -118,7 +349,7 @@ const donutSegments = computed(() => {
           <div v-if="datePickerOpen" class="dashboard-popover date-range-popover">
             <label>Start date<input v-model="dateRangeStart" type="date" :max="dateRangeEnd || undefined" /></label>
             <label>End date<input v-model="dateRangeEnd" type="date" :min="dateRangeStart || undefined" /></label>
-            <button class="toolbar-done-button" type="button" @click="datePickerOpen = false">Done</button>
+            <button class="toolbar-done-button" type="button" :disabled="dashboardLoading" @click="datePickerOpen = false; void loadDashboard()">Done</button>
           </div>
         </div>
         <div class="toolbar-popover-wrap">
@@ -133,11 +364,25 @@ const donutSegments = computed(() => {
             <svg class="toolbar-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
           </button>
           <div v-if="filtersOpen" class="dashboard-popover filters-popover">
+            <label class="view-by-filter">
+              <span>View By</span>
+              <select v-model="selectedViewBy" :disabled="dashboardLoading" aria-label="View by">
+                <option v-for="option in viewByOptions" :key="option" :value="option">{{ option }}</option>
+              </select>
+            </label>
+            <button
+              class="toolbar-done-button view-by-apply-button"
+              type="button"
+              :disabled="dashboardLoading"
+              @click="filtersOpen = false; void loadDashboard()"
+            >
+              Apply
+            </button>
             <div class="filter-popover-heading">
-              <strong>User segments</strong>
-              <button type="button" @click="selectedSegments = segments.map(segment => segment.label)">Reset</button>
+              <strong>Member segments</strong>
+              <button type="button" @click="selectedSegments = memberSegments.map(segment => segment.label)">Reset</button>
             </div>
-            <label v-for="segment in segments" :key="segment.label" class="segment-filter-option">
+            <label v-for="segment in memberSegments" :key="segment.label" class="segment-filter-option">
               <input v-model="selectedSegments" type="checkbox" :value="segment.label" />
               <span class="legend-swatch" :style="{ background: segment.color }" />
               <span>{{ segment.label }}</span>
@@ -145,6 +390,7 @@ const donutSegments = computed(() => {
           </div>
         </div>
       </div>
+      <p v-if="dashboardError" class="error" role="alert">{{ dashboardError }}</p>
       <div class="stats-grid">
         <article v-for="card in topCards" :key="card.label" class="metric-card" :class="`metric-${card.tone}`">
           <div class="metric-header">
@@ -157,7 +403,7 @@ const donutSegments = computed(() => {
             </span>
           </div>
           <div class="metric-value">{{ card.value }}</div>
-          <div class="metric-delta">{{ card.delta }}</div>
+          <div class="metric-delta">{{ dashboardLoading ? 'Loading…' : formattedDateRange }}</div>
         </article>
       </div>
 
@@ -165,15 +411,10 @@ const donutSegments = computed(() => {
         <div class="chart-panel">
           <div class="panel-header">
             <div class="chart-title-wrap">
-              <span class="panel-title">Revenue Over Time</span>
-              <span class="chart-info" role="img" aria-label="Revenue over time for May">i</span>
+              <span class="panel-title">Daily Disbursement</span>
+              <span class="chart-info" role="img" aria-label="Daily disbursement for the selected date range">i</span>
             </div>
             <div class="chart-controls">
-              <select v-model="chartPeriod" class="chart-period" aria-label="Chart time interval">
-                <option>Daily</option>
-                <option>Weekly</option>
-                <option>Monthly</option>
-              </select>
               <div class="chart-mode-controls" aria-label="Chart type">
                 <button type="button" :class="{ active: chartMode === 'line' }" aria-label="Line chart" @click="chartMode = 'line'">
                   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 18.5h16M5.5 15l4-4 3 2.5 6-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -181,84 +422,73 @@ const donutSegments = computed(() => {
                 <button type="button" :class="{ active: chartMode === 'area' }" aria-label="Area chart" @click="chartMode = 'area'">
                   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 18.5h16M5 16l4-4 3 2.5 6-7v11H5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
                 </button>
-                <button type="button" :class="{ active: chartMode === 'expected' }" aria-label="Compare with expected revenue" @click="chartMode = 'expected'">
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 18.5h16M5 15l4-3 3 2 6-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="3 2" /></svg>
-                </button>
               </div>
               <button class="chart-more-button" type="button" aria-label="More chart options" title="More chart options">⋮</button>
             </div>
           </div>
 
-          <div class="chart-legend" aria-hidden="true">
-            <span><i class="legend-dot revenue-dot" />Revenue</span>
-            <span><i class="legend-dash" />Revenue (Expected)</span>
+          <div class="disbursement-summary">
+            <span>Total disbursement</span>
+            <strong>{{ dashboardLoading ? 'Loading…' : formattedDisbursementTotal }}</strong>
           </div>
-          <div class="chart-surface" :class="`chart-mode-${chartMode}`" role="img" aria-label="Revenue over time chart">
+          <div class="chart-legend" aria-hidden="true">
+            <span><i class="legend-dot disbursement-dot" />Daily disbursement (BDT)</span>
+          </div>
+          <div v-if="dailyDisbursementSeries.length" class="chart-surface" :class="`chart-mode-${chartMode}`" role="img" aria-label="Daily disbursement chart">
             <div class="chart-y-labels" aria-hidden="true">
-              <span>$400K</span><span>$300K</span><span>$200K</span><span>$100K</span><span>$0</span>
+              <span v-for="(label, index) in chartAxisLabels" :key="index">{{ label }}</span>
             </div>
-            <svg class="revenue-plot" viewBox="0 0 710 240" preserveAspectRatio="none" aria-hidden="true">
+            <svg class="disbursement-plot" viewBox="0 0 710 240" preserveAspectRatio="none" aria-hidden="true">
               <defs>
-                <linearGradient id="revenue-area-fill" x1="0" x2="0" y1="0" y2="1">
+                <linearGradient id="disbursement-area-fill" x1="0" x2="0" y1="0" y2="1">
                   <stop offset="0%" stop-color="#f97316" stop-opacity=".2" />
                   <stop offset="100%" stop-color="#f97316" stop-opacity=".01" />
                 </linearGradient>
               </defs>
               <g class="plot-grid">
-                <line v-for="value in [0, 100, 200, 300, 400]" :key="value" x1="42" :y1="12 + 204 * (1 - value / 400)" x2="692" :y2="12 + 204 * (1 - value / 400)" />
+                <line v-for="fraction in [1, 0.75, 0.5, 0.25, 0]" :key="fraction" x1="42" :y1="12 + 204 * (1 - fraction)" x2="692" :y2="12 + 204 * (1 - fraction)" />
               </g>
-              <rect :x="anomalyX - 18" y="12" width="36" height="204" fill="#f97316" opacity=".09" />
-              <path :d="revenueAreaPath" fill="url(#revenue-area-fill)" />
-              <path :d="expectedLinePath" class="expected-revenue-line" />
-              <path :d="revenueLinePath" class="actual-revenue-line" />
+              <path v-if="chartMode === 'area'" :d="disbursementAreaPath" fill="url(#disbursement-area-fill)" />
+              <path :d="disbursementLinePath" class="disbursement-line" />
               <circle
-                v-for="(value, index) in revenueValues"
+                v-for="(value, index) in disbursementValues"
                 :key="index"
-                :cx="revenuePoint(value, index).x"
-                :cy="revenuePoint(value, index).y"
-                :r="index === 28 ? 5.2 : 2.3"
-                :class="{ 'anomaly-point': index === 28 }"
+                :cx="disbursementPoint(value, index).x"
+                :cy="disbursementPoint(value, index).y"
+                r="3.2"
               />
             </svg>
             <div class="chart-labels">
               <span v-for="label in chartLabels" :key="label">{{ label }}</span>
             </div>
-            <aside class="chart-anomaly-callout">
-              <div class="callout-title"><span class="revenue-dot" />Anomaly Detected</div>
-              <time>May 29, 2025</time>
-              <p>Revenue was 46% higher than expected, driving $142K additional revenue.</p>
-              <button type="button" class="callout-action" @click="emit('openVisualization')">View Anomaly</button>
-              <div class="confidence-heading"><span>AI Confidence</span><strong>92%</strong></div>
-              <div class="confidence-track"><span /></div>
-            </aside>
           </div>
+          <p v-else class="chart-empty-state">
+            {{ dailyDisbursementError || (dailyDisbursementLoading ? 'Loading daily disbursement data…' : 'No date-wise disbursement data for this date range.') }}
+          </p>
+          <p v-if="dailyDisbursementError && dailyDisbursementSeries.length" class="chart-empty-state" role="alert">
+            {{ dailyDisbursementError }}
+          </p>
         </div>
 
         <aside class="insight-panel">
           <div class="insight-header">
-            <span class="insight-title"><span class="insight-sparkle" aria-hidden="true">✦</span> AI Insight</span>
-            <span class="impact-tag">High Impact</span>
+            <span class="insight-title"><span class="insight-sparkle" aria-hidden="true">✦</span> Disbursement by {{ selectedViewBy }}</span>
+            <span class="impact-tag">Selected period</span>
           </div>
-          <h3>Unusual spike in revenue detected on May 29.</h3>
-          <p>This is due to a surge in New Users from Organic Search and a 23% increase in Avg. Order Value.</p>
-
-          <h4 class="factor-heading">Top Contributing Factors</h4>
-          <div class="factor-list">
-            <div v-for="factor in contributingFactors" :key="factor.label" class="factor">
-              <div class="factor-row">
-                <span class="factor-icon" aria-hidden="true">
-                  <svg v-if="factor.icon === 'user'" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3" stroke="currentColor" stroke-width="1.5" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
-                  <svg v-else-if="factor.icon === 'cart'" viewBox="0 0 24 24" fill="none"><path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /><circle cx="10" cy="19" r="1" fill="currentColor" /><circle cx="18" cy="19" r="1" fill="currentColor" /></svg>
-                  <svg v-else viewBox="0 0 24 24" fill="none"><path d="M4 10V5h5l9 9-5 5-9-9Zm3-2h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                </span>
-                <span class="factor-name">{{ factor.label }}</span>
-                <strong class="factor-value">{{ factor.value }}</strong>
+          <h3>{{ formattedDisbursementTotal }} BDT total</h3>
+          <p>{{ selectedViewBy }} totals for {{ formattedDateRange }}.</p>
+          <div v-if="viewDisbursementSeries.length" class="zone-disbursement-list">
+            <div v-for="zone in viewDisbursementSeries" :key="zone.label" class="zone-disbursement-row">
+              <div class="zone-disbursement-heading">
+                <span>{{ zone.label }}</span>
+                <strong>{{ formatAmount(zone.value) }} BDT</strong>
               </div>
-              <div class="factor-progress"><span :style="{ width: factor.width }" /></div>
+              <div class="zone-disbursement-track">
+                <span :style="{ width: `${maximumViewDisbursement > 0 ? zone.value / maximumViewDisbursement * 100 : 0}%` }" />
+              </div>
             </div>
           </div>
-
-          <button type="button" class="full-action" @click="emit('openVisualization')">View Full Analysis</button>
+          <p v-else>No zone data is available for this period.</p>
         </aside>
       </section>
 
@@ -280,26 +510,30 @@ const donutSegments = computed(() => {
 
         <article class="mini-panel">
           <div class="mini-panel-header">
-            <span>Users by Segment</span>
-            <span class="chart-info" role="img" aria-label="User distribution by segment">i</span>
+            <span>Member Segment</span>
+            <span class="chart-info" role="img" aria-label="Member distribution by segment">i</span>
+          </div>
+          <div class="member-segment-summary">
+            <span>Borrower <strong>{{ formatWholeNumber(borrowerTotal) }}</strong></span>
+            <span>OD Borrower <strong>{{ formatWholeNumber(overdueBorrowerTotal) }}</strong></span>
           </div>
           <div class="donut-wrap">
             <div
               class="donut-chart"
               role="img"
-              :aria-label="`Users by segment: ${visibleSegments.map(item => `${item.label} ${item.value}%`).join(', ')}`"
+              :aria-label="`Members by segment: ${visibleSegments.map(item => `${item.label} ${formatWholeNumber(item.count)}, ${item.percentage.toFixed(1)} percent`).join(', ')}`"
               :style="{ background: `conic-gradient(${donutSegments})` }"
             >
               <div class="donut-inner">
-                <strong>{{ new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 2 }).format(userCount) }}</strong>
-                <span>USERS</span>
+                <strong>{{ formatWholeNumber(memberTotal) }}</strong>
+                <span>MEMBERS</span>
               </div>
             </div>
             <div class="legend-list">
               <div v-for="item in visibleSegments" :key="item.label" class="legend-item">
                 <span class="legend-swatch" :style="{ background: item.color }" />
                 <span>{{ item.label }}</span>
-                <strong>{{ item.value }}%</strong>
+                <strong>{{ formatWholeNumber(item.count) }} · {{ item.percentage.toFixed(1) }}%</strong>
               </div>
             </div>
           </div>
