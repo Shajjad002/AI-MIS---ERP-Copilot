@@ -8,6 +8,10 @@ namespace AI.MIS.Application.Copilot;
 
 public interface IMISReportService : IBaseService<LoanTransactionReportSP>
 {
-    Task<BaseResponse> GetBranchPortfolioReport(ReportParameterViewModel viewModel);
+    Task<BaseResponse> GetBranchPortfolioReport(
+        ReportParameterViewModel viewModel,
+        CancellationToken cancellationToken = default);
+    Task<decimal> GetTotalDisbursement(
+        ReportParameterViewModel viewModel,
+        CancellationToken cancellationToken = default);
 }
-

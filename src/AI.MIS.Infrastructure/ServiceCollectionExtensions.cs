@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using AI.MIS.Application.Copilot;
+using AI.MIS.Application.Copilot.Interface;
 using AI.MIS.Infrastructure.AI;
 using AI.MIS.Infrastructure.Database;
 using AI.MIS.Infrastructure.Audit;
@@ -10,6 +11,8 @@ using AI.MIS.Application.Rag;
 using AI.MIS.Infrastructure.Rag;
 using AI.MIS.Application.Menus;
 using AI.MIS.Infrastructure.Menus;
+using AI.MIS.Infrastructure.MISReport;
+using AI.MIS.Domain.Entities;
 
 namespace AI.MIS.Infrastructure;
 
@@ -30,6 +33,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserRepository, SqlUserRepository>();
         services.AddScoped<IUserManagementService, SqlUserManagementService>();
         services.AddScoped<IMenuManagementService, SqlMenuManagementService>();
+        services.AddScoped<UserSession>();
+        services.AddScoped<IMISReportService, MISReportService>();
+        services.AddScoped<IDayInformationService, DayInformationService>();
+        services.AddScoped<IProgramService, ProgramService>();
         services.AddScoped<IAuthenticationService, JwtAuthenticationService>();
         services.Configure<RagOptions>(configuration.GetSection(RagOptions.SectionName));
         services.AddSingleton<IDocumentStore, LocalDocumentStore>();

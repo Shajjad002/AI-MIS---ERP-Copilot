@@ -1,11 +1,10 @@
 const apiBaseUrls = [
   import.meta.env.VITE_API_URL?.trim(),
-  'http://localhost:5252',
-  'http://localhost:5281',
+  'https://localhost:44340',
 ].filter((value): value is string => Boolean(value))
 
 export function getApiBaseUrl() {
-  return apiBaseUrls[0] ?? 'http://localhost:5252'
+  return apiBaseUrls[0] ?? 'https://localhost:44340'
 }
 
 export async function apiFetch(path: string, init: RequestInit = {}) {

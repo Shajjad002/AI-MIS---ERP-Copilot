@@ -22,6 +22,17 @@ public class Enums
     
 
 }
+public class ProgramList
+{
+    public const string Corporate = "000";
+    public const string Microcredit = "001";
+    public const string SME = "002";
+    public const string Health = "003";
+    public const string ProvidentFund = "006";
+    public const string Enrich = "010";
+    public const string AssetBusinessDevelopmentProject = "009";
+    public const string ShaktiPharma = "011";
+}
 
 public static class MemberLendingType
 {
